@@ -462,8 +462,7 @@ plot(AFRI_Region_raster)
 AFRI_Site_raster <- AFRI_RegionSite_Raster - AFRI_Region_raster*1000000
 plot(AFRI_Site_raster)
 
-#hot deserts
-#subset to just semi-arid grasslands...
+#subset to region
 AFRI_RegionSite_Raster[AFRI_RegionSite_Raster < 2000000] <- NA
 plot (AFRI_RegionSite_Raster)
 AFRI_RegionSite_Raster[AFRI_RegionSite_Raster >= 3000000] <- NA
@@ -572,7 +571,126 @@ plot(AFRI_Site_raster)
 #establish the extent
 extent_all_sites<- extent(AFRI_Site_raster) 
 
+# conus 1986 --------------------------------------------------------------
+
+year.1986<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000reduced-npp//landsat-6000-npp-1986.tif' 
+year_1986_conus=raster(year.1986)
+plot(year_1986_conus)
+year_1986_conus[year_1986_conus >= 65535] <- NA
+year_1986_conus = crop(year_1986_conus, extent_all_sites) 
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, year_1986_conus, "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+year_1986_conus<-crop(year_1986_conus,ex)
+new<-mask(year_1986_conus,AFRI_RegionSite_Raster)
+plot(new)
+title("1986")
+
+
+# conus 1996 --------------------------------------------------------------
+
+year.1996<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000reduced-npp//landsat-6000-npp-1996.tif' 
+year_1996_conus=raster(year.1996)
+plot(year_1996_conus)
+year_1996_conus[year_1996_conus >= 65535] <- NA
+year_1996_conus = crop(year_1996_conus, extent_all_sites) 
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, year_1996_conus, "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+year_1996_conus<-crop(year_1996_conus,ex)
+new<-mask(year_1996_conus,AFRI_RegionSite_Raster)
+plot(new)
+title("1996")
+
+
+# conus 2006 --------------------------------------------------------------
+
+year.2006<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000reduced-npp//landsat-6000-npp-2006.tif' 
+year_2006_conus=raster(year.2006)
+plot(year_2006_conus)
+year_2006_conus[year_2006_conus >= 65535] <- NA
+year_2006_conus = crop(year_2006_conus, extent_all_sites) 
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, year_2006_conus, "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+year_2006_conus<-crop(year_2006_conus,ex)
+new<-mask(year_2006_conus,AFRI_RegionSite_Raster)
+plot(new)
+title("2006")
+
+
+# Conus 2016 --------------------------------------------------------------
+
+year.2016<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000reduced-npp//landsat-6000-npp-2016.tif' 
+year_2016_conus=raster(year.2016)
+plot(year_2016_conus)
+year_2016_conus[year_2016_conus >= 65535] <- NA
+year_2016_conus = crop(year_2016_conus, extent_all_sites) 
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, year_2016_conus, "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+year_2016_conus<-crop(year_2016_conus,ex)
+new<-mask(year_2016_conus,AFRI_RegionSite_Raster)
+plot(new)
+title("2016")
 
 
 
+
+
+# 1000 m ------------------------------------------------------------------
+
+#####1000m resolution
+#Specify directory where you have the raster
+dir.AFRI <- "/Users/andrewfelton/Desktop/USU/Remote_Sensing"
+
+#Load raster (can name this whatever you want)
+AFRI_RegionSite_Raster <- raster(file.path(dir.AFRI , "RasterbySiteID3.tif"))
+
+#look at raster strcture
+AFRI_RegionSite_Raster
+#plot it
+plot(AFRI_RegionSite_Raster)
+AFRI_RegionSite_Raster   
+#Create a raster for the different regions
+AFRI_Region_raster <- round(AFRI_RegionSite_Raster/1000000)
+plot(AFRI_Region_raster)
+?round
+#Create a raster for the different regions
+AFRI_Site_raster <- AFRI_RegionSite_Raster - AFRI_Region_raster*1000000
+plot(AFRI_Site_raster)
+
+#subset to region
+AFRI_RegionSite_Raster[AFRI_RegionSite_Raster < 2000000] <- NA
+plot (AFRI_RegionSite_Raster)
+AFRI_RegionSite_Raster[AFRI_RegionSite_Raster >= 3000000] <- NA
+extent(AFRI_RegionSite_Raster)
+
+#zoom 
+zoom_col_desert_1<-zoom(AFRI_RegionSite_Raster, ext=drawExtent(), maxpixels=100000, layer=1, new=TRUE, useRaster=TRUE)
+extent(zoom_col_desert_1)
+extent_cold_desert_1<- extent(-122.317, -103.774, 33.99615 ,  48.65204 ) 
+AFRI_RegionSite_Raster= crop(AFRI_RegionSite_Raster, extent_cold_desert_1)
+plot(AFRI_RegionSite_Raster)
+
+# cold desert 1000 m resolution ------------------------------------------------
+
+setwd('/Users/andrewfelton/Desktop/USU/Remote_Sensing/')
+year.1986<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-1000reduced-npp//landsat-1000-npp-1986.tif' 
+year_1986_desert=raster(year.1986)
+plot(year_1986_desert)
+year_1986_desert[year_1986_desert >= 65535] <- NA
+year_1986_desert = crop(year_1986_desert, extent_desert_1) 
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, year_1986_desert, "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+year_1986_desert<-crop(year_1986_desert,ex)
+new<-mask(year_1986_desert,AFRI_RegionSite_Raster)
+plot(new)
+title("cold Deserts 1986")
 
