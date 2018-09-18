@@ -684,13 +684,16 @@ year.1986<-'/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-1000reduced-n
 year_1986_desert=raster(year.1986)
 plot(year_1986_desert)
 year_1986_desert[year_1986_desert >= 65535] <- NA
-year_1986_desert = crop(year_1986_desert, extent_desert_1) 
+year_1986_desert = crop(year_1986_desert, extent_cold_desert_1) 
 
 #try to fix the slightly off extents
-r.new = resample(AFRI_RegionSite_Raster, year_1986_desert, "bilinear")
-ex<-extent(AFRI_RegionSite_Raster)
-year_1986_desert<-crop(year_1986_desert,ex)
-new<-mask(year_1986_desert,AFRI_RegionSite_Raster)
+####issue with masking a rster witha  different resolution
+r.new = resample(year_1986_desert,AFRI_RegionSite_Raster, "bilinear") #brings landsat data ti the afri resolution
+ex<-extent(AFRI_RegionSite_Raster) #establishes the extent
+year_1986_desert<-crop(r.new,ex)
+new<-mask(r.new,AFRI_RegionSite_Raster) #masks dervided coarse landsat resolution by afri sites
 plot(new)
 title("cold Deserts 1986")
 
+#summary stats
+cellStats(new, stat='mean', na.rm=TRUE, asSample=TRUE)
