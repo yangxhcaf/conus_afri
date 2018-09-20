@@ -112,10 +112,10 @@ mean(data_frame_time_series_sgs_sd$time_series_sd_sgs) #691.0563 #average spatia
 #summaries for graphics
 #mean by pixel
 sgs_spatiotemporal_mean<-summaryBrick(new_all_years_sgs, mean, na.rm=TRUE)
-plot(sgs_spatiotemporal_mean)
+
 #standard dev
 sgs_spatiotemporal_sd<-summaryBrick(new_all_years_sgs, sd, na.rm=TRUE)
-plot(sgs_spatiotemporal_sd)
+
 #%CV
 #temporal trend
 
@@ -188,6 +188,15 @@ sd(data_frame_time_series_mean_cali$time_series_mean) #348.4559
 data_frame_time_series_sgs_cali<-as.data.frame(time_series_sd_cali)
 #hist(data_frame_time_series_sgs_sd$time_series_sd_sgs)
 mean(data_frame_time_series_sgs_cali$time_series_sd_cali) #1163.254 #average spatial variability
+
+#summaries for graphics
+#mean by pixel
+cali_spatiotemporal_mean<-summaryBrick(new_all_years_cali, mean, na.rm=TRUE)
+
+#standard dev
+cali_spatiotemporal_sd<-summaryBrick(new_all_years_cali, sd, na.rm=TRUE)
+#CV
+#temporal trend
 
 
 # temporal data hot deserts -------------------------------------------------
@@ -354,10 +363,10 @@ mean(data_frame_time_series_cold_deserts_sd$time_series_sd_cold_deserts) #682.09
 #summaries for graphics
 #mean by pixel
 cold_desert_spatiotemporal_mean<-summaryBrick(new_all_years_cold_deserts, mean, na.rm=TRUE)
-plot(sgs_spatiotemporal_mean)
+
 #standard dev
 cold_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_cold_deserts, sd, na.rm=TRUE)
-plot(sgs_spatiotemporal_sd)
+
 #%CV
 #temporal trend
 
@@ -498,29 +507,36 @@ title("Lowest regional NPP: Semi-arid Steppe (2011)")
 
 # ggplot ------------------------------------------------------------------
 
-ggplot() +
-  ggspatial::geom_spatial(data = new, mapping = aes(colour = STREAMTYPE)) +
-  coord_map()
-
-plot(new, breaks=seq(min(minValue( new )),max(maxValue(new))))
-plot( new, col=rev( rainbow( 99, start=0,end=1 ) ),zlim=c(0,1) )
-length.out
+library(RColorBrewer)
+library(scales)
+library(viridis)
+library(ggthemes)
 library(rasterVis)
 library(ggplot2)
-rng = (range(ge)0
-hist(sgs_spatiotemporal_sd)
-gplot(sgs_spatiotemporal_sd) + 
-  geom_tile(aes(fill=value)) +
-  ggtitle("Cold deserts mean NPP") +
-  xlab("") +
-  ylab("") +
-  scale_fill_gradient2(low="red", mid="orange", high="darkgreen", 
-                       midpoint=400,    # Value that gets the middle color (default is zero)
-                       limits=c(floor(0), ceiling(2100))) 
+#color pallete info
+#https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
-gplot(new_2011) + 
-  geom_tile(aes(fill=value)) +
-  ggtitle("Semi-arid Steppe low NPP:2011") +
-  scale_fill_gradient2(low="red", mid="orange", high="darkgreen", 
-                       midpoint=2000,    # Value that gets the middle color (default is zero)
-                       limits=c(floor(0), ceiling(4100))) 
+#convert to dataframe
+p = rasterToPoints(cold_deserts_spatiotemporal_sd); df = data.frame(p)
+colnames(df) = c("x", "y", "SD")
+
+##
+  ggplot(data=df) + geom_tile(aes(x, y, fill=SD)) +
+  coord_equal() + labs(x=NULL, y=NULL) + 
+  scale_fill_gradient2(low="blue", mid="yellow2",high="red", midpoint=150,
+                       breaks = br.2,na.value="white") +
+    xlab("") +
+    ylab("") +
+    ggtitle("") +
+    #coord_equal() +
+    theme_map() +
+    theme(legend.position="bottom") +
+    theme(legend.key.width=unit(2, "cm")) +
+    theme(legend.key.height = unit(.2, "cm"))
+
+  hist(cold_deserts_spatiotemporal_sd)
+
+  low="red", mid="yellow2",high="limegreen"
+  
+  br <- seq(min(df$NPP), max(df$NPP), len=100)
+  br.2 <-c(0,500,1000,1500,2000,2800)
