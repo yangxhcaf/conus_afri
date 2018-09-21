@@ -517,13 +517,21 @@ library(ggplot2)
 #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
 #convert to dataframe
-p = rasterToPoints(cold_deserts_spatiotemporal_sd); df = data.frame(p)
-colnames(df) = c("x", "y", "SD")
+p_sd = rasterToPoints(northern_mixed_deserts_spatiotemporal_sd); df_sd = data.frame(p_sd)
+colnames(df_sd) = c("x", "y", "sd")
 
+p_mean = rasterToPoints(northern_mixed_desert_spatiotemporal_mean); df_mean = data.frame(p_mean)
+colnames(df_mean) = c("x", "y", "mean")
+
+p_sd_mean<-merge(df_mean,df_sd,by=c("x","y"))
+colnames(p_sd_mean) = c("x","y","sd","mean")
+## add a CV column
+p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100
+summary(p_sd_mean)
 ##
-  ggplot(data=df) + geom_tile(aes(x, y, fill=SD)) +
+  ggplot(data=p_sd_mean) + geom_tile(aes(x, y, fill=cv)) +
   coord_equal() + labs(x=NULL, y=NULL) + 
-  scale_fill_gradient2(low="blue", mid="yellow2",high="red", midpoint=150,
+  scale_fill_gradient2(low="blue", mid="yellow2",high="red", midpoint=570,
                        breaks = br.2,na.value="white") +
     xlab("") +
     ylab("") +
@@ -534,9 +542,9 @@ colnames(df) = c("x", "y", "SD")
     theme(legend.key.width=unit(2, "cm")) +
     theme(legend.key.height = unit(.2, "cm"))
 
-  hist(cold_deserts_spatiotemporal_sd)
+  hist(p_sd_mean$cv)
 
   low="red", mid="yellow2",high="limegreen"
   
-  br <- seq(min(df$NPP), max(df$NPP), len=100)
-  br.2 <-c(0,500,1000,1500,2000,2800)
+
+  br.2 <-c(100,300,600,900,1200,1600)
