@@ -9,6 +9,7 @@ library(rgeos)
 library(scales)
 library(sf)
 library(bfastSpatial)
+library(greenbrown)
 ### need to: find a way to calculate cv and temporal trend for graphics in a clean ggplot
 ### graphics of summary stats withine ach ecoregion (according to their scale) and within the entire western US rangelands
 
@@ -116,8 +117,8 @@ sgs_spatiotemporal_mean<-summaryBrick(new_all_years_sgs, mean, na.rm=TRUE)
 #standard dev
 sgs_spatiotemporal_sd<-summaryBrick(new_all_years_sgs, sd, na.rm=TRUE)
 
-#%CV
 #temporal trend
+trend_sgs<-TrendRaster(new_all_years_sgs, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
 
 # temporal data california ------------------------------------------------
 #Specify directory where you have the raster
@@ -195,8 +196,9 @@ cali_spatiotemporal_mean<-summaryBrick(new_all_years_cali, mean, na.rm=TRUE)
 
 #standard dev
 cali_spatiotemporal_sd<-summaryBrick(new_all_years_cali, sd, na.rm=TRUE)
-#CV
+
 #temporal trend
+trend_cali<-TrendRaster(new_all_years_cali, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
 
 
 # temporal data hot deserts -------------------------------------------------
@@ -274,9 +276,10 @@ hot_deserts_spatiotemporal_mean<-summaryBrick(new_all_years_hot_deserts, mean, n
 
 #standard dev
 hot_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_hot_deserts, sd, na.rm=TRUE)
-#CV
-#temporal trend
 
+#temporal trend
+#temporal trend
+trend_hot_deserts<-TrendRaster(new_all_years_hot_deserts, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
 
 # temporal data cold deserts ----------------------------------------------
 
@@ -367,8 +370,8 @@ cold_desert_spatiotemporal_mean<-summaryBrick(new_all_years_cold_deserts, mean, 
 #standard dev
 cold_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_cold_deserts, sd, na.rm=TRUE)
 
-#%CV
 #temporal trend
+trend_cold_deserts<-TrendRaster(new_all_years_cold_deserts, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
 
 # temporal data northern mixed grass --------------------------------------
 #Specify directory where you have the raster
@@ -449,9 +452,14 @@ northern_mixed_desert_spatiotemporal_mean<-summaryBrick(new_all_years_northern_m
 #standard dev
 northern_mixed_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_northern_mixed, sd, na.rm=TRUE)
 
-#%CV
 #temporal trend
-
+install.packages("greenbrown", repos="http://R-Forge.R-project.org",dependencies=TRUE)
+install.packages("greenbrown_2.4.2.tar.gz", repos = NULL, type="source",dependencies=TRUE)
+Yes
+library(greenbrown)
+library(trend)
+trend<-TrendRaster(new_all_years_northern_mixed, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
+plot(trend)
 # turning into derived data frame -----------------------------------------
 
 site<-c("Northern Mixed grass","Cold Deserts","Hot deserts","California annuals","Semi-arid steppe")
@@ -516,6 +524,7 @@ library(ggplot2)
 #color pallete info
 #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
+#CV
 #convert to dataframe
 p_sd = rasterToPoints(northern_mixed_deserts_spatiotemporal_sd); df_sd = data.frame(p_sd)
 colnames(df_sd) = c("x", "y", "sd")
@@ -528,10 +537,18 @@ colnames(p_sd_mean) = c("x","y","sd","mean")
 ## add a CV column
 p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100
 summary(p_sd_mean)
+
+#trend
+p_trend = rasterToPoints(trend_hot_deserts); df_trend = data.frame(p_trend)
+colnames(df_trend) = c("x", "y", "slope")
+
+summary(df_trend)
+
+
 ##
-  ggplot(data=p_sd_mean) + geom_tile(aes(x, y, fill=cv)) +
+  ggplot(data=df_trend) + geom_tile(aes(x, y, fill=SlopeSEG1)) +
   coord_equal() + labs(x=NULL, y=NULL) + 
-  scale_fill_gradient2(low="blue", mid="yellow2",high="red", midpoint=570,
+  scale_fill_gradient2(low="red", mid="yellow2",high="green", midpoint=0,
                        breaks = br.2,na.value="white") +
     xlab("") +
     ylab("") +
@@ -542,9 +559,9 @@ summary(p_sd_mean)
     theme(legend.key.width=unit(2, "cm")) +
     theme(legend.key.height = unit(.2, "cm"))
 
-  hist(p_sd_mean$cv)
+  hist(df_trend$SlopeSEG1)
 
   low="red", mid="yellow2",high="limegreen"
   
 
-  br.2 <-c(100,300,600,900,1200,1600)
+  br.2 <-c(-204,-50,0,50,250)
