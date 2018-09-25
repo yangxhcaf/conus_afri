@@ -372,7 +372,7 @@ cold_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_cold_deserts, sd, na.
 
 #temporal trend
 trend_cold_deserts<-TrendRaster(new_all_years_cold_deserts, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
-
+plot(cold_deserts_spatiotemporal_sd)
 # temporal data northern mixed grass --------------------------------------
 #Specify directory where you have the raster
 dir.AFRI <- "/Users/andrewfelton/Desktop/USU/Remote_Sensing"
@@ -455,11 +455,63 @@ northern_mixed_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_northern_mi
 #temporal trend
 install.packages("greenbrown", repos="http://R-Forge.R-project.org",dependencies=TRUE)
 install.packages("greenbrown_2.4.2.tar.gz", repos = NULL, type="source",dependencies=TRUE)
-Yes
+logo.trend <- raster.kendall(new_all_years_northern_mixed, p.value=TRUE, confidence=TRUE)
+library(spatialEco)
 library(greenbrown)
 library(trend)
 trend<-TrendRaster(new_all_years_northern_mixed, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
 plot(trend)
+
+# all regions -------------------------------------------------------------
+#Specify directory where you have the raster
+dir.AFRI <- "/Users/andrewfelton/Desktop/USU/Remote_Sensing"
+
+#Load raster (can name this whatever you want)
+AFRI_RegionSite_Raster <- raster(file.path(dir.AFRI , "RasterbySiteID3.tif"))
+
+#look at raster strcture
+AFRI_RegionSite_Raster
+#plot it
+plot(AFRI_RegionSite_Raster)
+AFRI_RegionSite_Raster   
+#Create a raster for the different regions
+AFRI_Region_raster <- round(AFRI_RegionSite_Raster/1000000)
+plot(AFRI_Region_raster)
+?round
+#Create a raster for the different regions
+AFRI_Site_raster <- AFRI_RegionSite_Raster - AFRI_Region_raster*1000000
+plot(AFRI_Site_raster)
+
+#define extent
+extent(AFRI_RegionSite_Raster)
+extent_all<- extent(AFRI_RegionSite_Raster )
+
+#conus data
+setwd('/Users/andrewfelton/Desktop/USU/')
+filenames <- dir("/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000reduced-npp/", full.names = T)
+#filenames
+filenames_stack <-stack(filenames)
+
+filenames_stack[filenames_stack >= 65535] <- NA
+filenames_stack_all = crop(filenames_stack, extent_all)
+plot(filenames_stack_all)
+
+#try to fix the slightly off extents
+r.new = resample(AFRI_RegionSite_Raster, filenames_stack_all , "bilinear")
+ex<-extent(AFRI_RegionSite_Raster)
+filenames_stack_all <-crop(filenames_stack_all ,ex)
+new_all_years_all_sites<-mask(filenames_stack_all ,AFRI_RegionSite_Raster)
+
+#mean by pixel
+all_spatiotemporal_mean<-summaryBrick(new_all_years_all_sites, mean, na.rm=TRUE)
+
+#standard dev
+all_spatiotemporal_sd<-summaryBrick(new_all_years_all_sites, sd, na.rm=TRUE)
+
+#temporal trend
+trend_all<-TrendRaster(new_all_years_all_sites, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
+
+
 # turning into derived data frame -----------------------------------------
 
 site<-c("Northern Mixed grass","Cold Deserts","Hot deserts","California annuals","Semi-arid steppe")
@@ -524,32 +576,41 @@ library(ggplot2)
 #color pallete info
 #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
-#CV
-#convert to dataframe
+#sd
 p_sd = rasterToPoints(northern_mixed_deserts_spatiotemporal_sd); df_sd = data.frame(p_sd)
 colnames(df_sd) = c("x", "y", "sd")
+hist(df_sd$sd,main="",xlab="sd")
+summary(df_sd)
 
+#mean
 p_mean = rasterToPoints(northern_mixed_desert_spatiotemporal_mean); df_mean = data.frame(p_mean)
 colnames(df_mean) = c("x", "y", "mean")
+#df_mean$log.mean<-df_mean$ln(mean)
+summary(df_mean)
+hist(df_mean$mean,main="",xlab="mean")
+head(df_mean)
 
-p_sd_mean<-merge(df_mean,df_sd,by=c("x","y"))
-colnames(p_sd_mean) = c("x","y","sd","mean")
+#cv
+p_sd_mean<-merge(df_mean,df_sd,by=c("x","y")) #merge sd and mean datasets
+colnames(p_sd_mean) = c("x","y","mean","sd")
+
 ## add a CV column
-p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100
+p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100 
 summary(p_sd_mean)
+hist(p_sd_mean$cv,main="",xlab="cv")
 
 #trend
-p_trend = rasterToPoints(trend_hot_deserts); df_trend = data.frame(p_trend)
-colnames(df_trend) = c("x", "y", "slope")
-
+p_trend = rasterToPoints(p_sd_mean); df_trend = data.frame(cv)
+hist(df_trend$SlopeSEG1,main="",xlab="slope")
+head(df_trend)
 summary(df_trend)
 
 
 ##
-  ggplot(data=df_trend) + geom_tile(aes(x, y, fill=SlopeSEG1)) +
+  ggplot(data=p_sd_mean) + geom_tile(aes(x, y, fill=sd)) +
   coord_equal() + labs(x=NULL, y=NULL) + 
-  scale_fill_gradient2(low="red", mid="yellow2",high="green", midpoint=0,
-                       breaks = br.2,na.value="white") +
+  scale_fill_gradient2(low="blue",mid="yellow2",high="red", midpoint=500,
+                       na.value="white") +
     xlab("") +
     ylab("") +
     ggtitle("") +
@@ -560,8 +621,21 @@ summary(df_trend)
     theme(legend.key.height = unit(.2, "cm"))
 
   hist(df_trend$SlopeSEG1)
-
-  low="red", mid="yellow2",high="limegreen"
   
-
-  br.2 <-c(-204,-50,0,50,250)
+  get_col <- colorRampPalette(c("#0f0f20","#20100f"))  # make fun to interpolate colors
+  quantiles <- (0:6) / 6    
+  quantile.vals <- quantile(p_sd_mean$cv, quantiles, names=F,na.rm=TRUE) # the values for each quantile
+  colours <- rgb(get_col(quantiles), max=1335)       # 7 evenly interpolated colors 
+  val.remap <- (quantile.vals - min(p_sd_mean$cv,na.rm=TRUE)) / 
+    diff(range(p_sd_mean$cv,na.rm=TRUE))
+  
+range(p_sd_mean$cv,na.rm=TRUE)
+  br.2 <-c(17,2,1000,1500,2000,3500,3000)
+  br.2 <-round(quantile.vals,0)
+  colfunc<-colorRampPalette(c("red","yellow","springgreen","royalblue"))
+  
+  scale_fill_gradientn(
+    colours=colours,
+    values=val.remap,
+    breaks=quantile.vals,# Necessary to get legend values spread appropriately
+    guide="legend") +
