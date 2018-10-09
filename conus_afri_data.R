@@ -576,14 +576,15 @@ library(ggplot2)
 #color pallete info
 #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
+#change to data frames to analyze distributions
 #sd
-p_sd = rasterToPoints(northern_mixed_deserts_spatiotemporal_sd); df_sd = data.frame(p_sd)
+p_sd = rasterToPoints(sgs_spatiotemporal_sd); df_sd = data.frame(p_sd)
 colnames(df_sd) = c("x", "y", "sd")
 hist(df_sd$sd,main="",xlab="sd")
 summary(df_sd)
 
 #mean
-p_mean = rasterToPoints(northern_mixed_desert_spatiotemporal_mean); df_mean = data.frame(p_mean)
+p_mean = rasterToPoints(sgs_spatiotemporal_mean); df_mean = data.frame(p_mean)
 colnames(df_mean) = c("x", "y", "mean")
 #df_mean$log.mean<-df_mean$ln(mean)
 summary(df_mean)
@@ -597,19 +598,32 @@ colnames(p_sd_mean) = c("x","y","mean","sd")
 ## add a CV column
 p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100 
 summary(p_sd_mean)
-hist(p_sd_mean$cv,main="",xlab="cv")
+hist(cv_only$cv,main="",xlab="cv")
+cv_only <- p_sd_mean[ -c(3,4) ]
+raster_cv<- rasterFromXYZ(cv_only)
 
 #trend
-p_trend = rasterToPoints(p_sd_mean); df_trend = data.frame(cv)
+p_trend = rasterToPoints(trend_sgs); df_trend = data.frame(p_trend)
 hist(df_trend$SlopeSEG1,main="",xlab="slope")
 head(df_trend)
 summary(df_trend)
+slope_only <- df_trend[ -c(3,5) ]
+raster_slope<- rasterFromXYZ(slope_only)
 
+#sites
+p_afri = rasterToPoints(AFRI_RegionSite_Raster); df_afri = data.frame(p_afri)
+hist(df_trend$SlopeSEG1,main="",xlab="slope")
+head(df_afri)
+summary(df_trend)
 
+ecdf(df_sd$sd)
+breakpoints<-quantile(df_sd$sd,seq(from=0.01, to = 0.99,by=0.01))
 ##
-  ggplot(data=p_sd_mean) + geom_tile(aes(x, y, fill=sd)) +
+  ggplot(data=df_sd) + geom_tile(aes(x, y, fill=sd)) +
   coord_equal() + labs(x=NULL, y=NULL) + 
-  scale_fill_gradient2(low="blue",mid="yellow2",high="red", midpoint=500,
+    #geom_point(aes(colour = z1)) +
+    scale_fill_distiller(palette = "RdYlGn",breaks=breaks)
+    scale_colour_gradientn(colours = rev(terrain.colors(10)), breaks=breakpoints,
                        na.value="white") +
     xlab("") +
     ylab("") +
@@ -639,3 +653,51 @@ range(p_sd_mean$cv,na.rm=TRUE)
     values=val.remap,
     breaks=quantile.vals,# Necessary to get legend values spread appropriately
     guide="legend") +
+
+    #### equal area for color representation colorramps 
+    
+    #Code to examine the data, determine appropriate thresholds, and then establish color palettes.  
+    
+    #mean
+    hist(df_mean$mean)
+  summary(df_mean$mean)
+  
+  ecdf(df_sd$sd)
+  breakpoints_mean<-quantile(df_mean$mean,seq(from=0.01, to = 0.99,by=0.01))
+  #sd
+  hist(df_sd$##sd)
+  summary(df_sd$sd)
+  
+  #cv
+  library(raster)
+  break_cv<-quantile(cv_only$cv,seq(from=0.01, to = 0.99,by=0.01))
+  
+  #slope
+  break_slope<-quantile(slope_only$SlopeSEG1,seq(from=0.01, to = 0.99,by=0.01))
+  break_slope_2<-seq(from=-160, to = 120,by=1)
+  summary(slope_only)
+  
+  library(colorspace)
+  library(sp)
+  #dat is just a data frame, with two variables specifying the locations of the cell centers
+  #base_stack is a raster stack with resolution designed to match the dataframe
+  
+  library(colorRamps)
+  plot(raster_slope)
+  spplot(raster_slope,
+         at=break_slope,
+         asp=1,
+         col.regions =
+           rev(terrain.colors (length(break_slope)-1)),
+         main="")
+  
+       #reverse colro scheme
+        #rev
+  #colors
+  #terrain.colors - for productivity
+  #heat_hcl
+  #green2red
+  
+  library(classInt)
+  breaks <- classIntervals(df_sd$sd, n = 50, style = "quantile")
+  
