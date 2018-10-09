@@ -665,7 +665,7 @@ range(p_sd_mean$cv,na.rm=TRUE)
   ecdf(df_sd$sd)
   breakpoints_mean<-quantile(df_mean$mean,seq(from=0.01, to = 0.99,by=0.01))
   #sd
-  hist(df_sd$##sd)
+  hist(df_sd$)##sd)
   summary(df_sd$sd)
   
   #cv
@@ -697,7 +697,28 @@ range(p_sd_mean$cv,na.rm=TRUE)
   #terrain.colors - for productivity
   #heat_hcl
   #green2red
-  
-  library(classInt)
-  breaks <- classIntervals(df_sd$sd, n = 50, style = "quantile")
+  setwd
+  setwd('/Users/andrewfelton/Desktop/USU/Remote_Sensing')
+  l = list.files(paths, full.names = TRUE)
+  l[sapply(l, file.size) == 0]
+  #to crop by states...
+  update.packages()
+  library(rgdal)
+  library(GADMTools)
+  library(raster)
+  library(sp)
+  library(rasterVis)
+  library(maps)
+  france<-getData('GADM', country='FRA', level=1)
+  getData('ISO3')
+  getData('worldclim', var='bio', res=10)
+  map('usa',fill=FALSE,col=palette())
+  states    <- c('New Mexico', 'Texas', 'Nebraska', 'Kansas', 'Wyoming', 'Oklahoma')
+  us<-getData("GADM", country='VIR', level=1,download=TRUE)
+  ?readOGR
+  California <- out[out$NAME_1 %in% 'California',]
+  state <- readOGR(dsn = 'path.data', layer = "usa_state_shapefile")
+  projection(state) <- CRS("+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
+  ?readOGR
+  us_states <- readOGR("us-boundaries/us_bound_pop.shp")
   
