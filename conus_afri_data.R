@@ -280,7 +280,7 @@ hot_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_hot_deserts, sd, na.rm
 #temporal trend
 #temporal trend
 trend_hot_deserts<-TrendRaster(new_all_years_hot_deserts, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
-
+plot(new_all_years_hot_deserts)
 # temporal data cold deserts ----------------------------------------------
 
 #Specify directory where you have the raster
@@ -366,13 +366,14 @@ mean(data_frame_time_series_cold_deserts_sd$time_series_sd_cold_deserts) #682.09
 #summaries for graphics
 #mean by pixel
 cold_desert_spatiotemporal_mean<-summaryBrick(new_all_years_cold_deserts, mean, na.rm=TRUE)
-
+plot(cold_desert_spatiotemporal_mean)
 #standard dev
 cold_deserts_spatiotemporal_sd<-summaryBrick(new_all_years_cold_deserts, sd, na.rm=TRUE)
 
 #temporal trend
 trend_cold_deserts<-TrendRaster(new_all_years_cold_deserts, start = c(1986, 1), freq = 1, method = c("AAT"), mosum.pval = 0.05, h = 0.15, breaks = 0)
-plot(cold_deserts_spatiotemporal_sd)
+plot(new_all_years_cold_deserts)
+
 # temporal data northern mixed grass --------------------------------------
 #Specify directory where you have the raster
 dir.AFRI <- "/Users/andrewfelton/Desktop/USU/Remote_Sensing"
@@ -577,14 +578,16 @@ library(ggplot2)
 #https://www.nceas.ucsb.edu/~frazier/RSpatialGuides/colorPaletteCheatsheet.pdf
 
 #change to data frames to analyze distributions
+plot(northern_mixed_deserts_spatiotemporal_sd)
 #sd
-p_sd = rasterToPoints(sgs_spatiotemporal_sd); df_sd = data.frame(p_sd)
+p_sd = rasterToPoints(northern_mixed_deserts_spatiotemporal_sd); df_sd = data.frame(p_sd)
 colnames(df_sd) = c("x", "y", "sd")
 hist(df_sd$sd,main="",xlab="sd")
 summary(df_sd)
 
 #mean
-p_mean = rasterToPoints(sgs_spatiotemporal_mean); df_mean = data.frame(p_mean)
+
+p_mean = rasterToPoints(northern_mixed_desert_spatiotemporal_mean); df_mean = data.frame(p_mean)
 colnames(df_mean) = c("x", "y", "mean")
 #df_mean$log.mean<-df_mean$ln(mean)
 summary(df_mean)
@@ -597,13 +600,16 @@ colnames(p_sd_mean) = c("x","y","mean","sd")
 
 ## add a CV column
 p_sd_mean$cv<-((p_sd_mean$sd)/(p_sd_mean$mean))*100 
-summary(p_sd_mean)
-hist(cv_only$cv,main="",xlab="cv")
+summary(p_sd_mean$cv)
+hist(p_sd_mean$cv,main="",xlab="cv")
+head(p_sd_mean)
 cv_only <- p_sd_mean[ -c(3,4) ]
 raster_cv<- rasterFromXYZ(cv_only)
 
 #trend
-p_trend = rasterToPoints(trend_sgs); df_trend = data.frame(p_trend)
+plot(trend)
+
+p_trend = rasterToPoints(trend); df_trend = data.frame(p_trend)
 hist(df_trend$SlopeSEG1,main="",xlab="slope")
 head(df_trend)
 summary(df_trend)
@@ -616,91 +622,70 @@ hist(df_trend$SlopeSEG1,main="",xlab="slope")
 head(df_afri)
 summary(df_trend)
 
-ecdf(df_sd$sd)
-breakpoints<-quantile(df_sd$sd,seq(from=0.01, to = 0.99,by=0.01))
-##
-  ggplot(data=df_sd) + geom_tile(aes(x, y, fill=sd)) +
-  coord_equal() + labs(x=NULL, y=NULL) + 
-    #geom_point(aes(colour = z1)) +
-    scale_fill_distiller(palette = "RdYlGn",breaks=breaks)
-    scale_colour_gradientn(colours = rev(terrain.colors(10)), breaks=breakpoints,
-                       na.value="white") +
-    xlab("") +
-    ylab("") +
-    ggtitle("") +
-    #coord_equal() +
-    theme_map() +
-    theme(legend.position="bottom") +
-    theme(legend.key.width=unit(2, "cm")) +
-    theme(legend.key.height = unit(.2, "cm"))
-
-  hist(df_trend$SlopeSEG1)
-  
-  get_col <- colorRampPalette(c("#0f0f20","#20100f"))  # make fun to interpolate colors
-  quantiles <- (0:6) / 6    
-  quantile.vals <- quantile(p_sd_mean$cv, quantiles, names=F,na.rm=TRUE) # the values for each quantile
-  colours <- rgb(get_col(quantiles), max=1335)       # 7 evenly interpolated colors 
-  val.remap <- (quantile.vals - min(p_sd_mean$cv,na.rm=TRUE)) / 
-    diff(range(p_sd_mean$cv,na.rm=TRUE))
-  
-range(p_sd_mean$cv,na.rm=TRUE)
-  br.2 <-c(17,2,1000,1500,2000,3500,3000)
-  br.2 <-round(quantile.vals,0)
-  colfunc<-colorRampPalette(c("red","yellow","springgreen","royalblue"))
-  
-  scale_fill_gradientn(
-    colours=colours,
-    values=val.remap,
-    breaks=quantile.vals,# Necessary to get legend values spread appropriately
-    guide="legend") +
-
-    #### equal area for color representation colorramps 
-    
     #Code to examine the data, determine appropriate thresholds, and then establish color palettes.  
     
-    #mean
-    hist(df_mean$mean)
-  summary(df_mean$mean)
+  #mean
+  break_mean<-quantile(df_mean$mean,seq(from=0.01, to = 0.99,by=0.01))
   
-  ecdf(df_sd$sd)
-  breakpoints_mean<-quantile(df_mean$mean,seq(from=0.01, to = 0.99,by=0.01))
   #sd
-  hist(df_sd$)##sd)
-  summary(df_sd$sd)
+  break_sd<-quantile(df_sd$sd,seq(from=0.01, to = 0.99,by=0.01))
   
   #cv
   library(raster)
-  break_cv<-quantile(cv_only$cv,seq(from=0.01, to = 0.99,by=0.01))
+  break_cv<-quantile(cv_only$cv,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
   
   #slope
-  break_slope<-quantile(slope_only$SlopeSEG1,seq(from=0.01, to = 0.99,by=0.01))
-  break_slope_2<-seq(from=-160, to = 120,by=1)
-  summary(slope_only)
+  break_slope<-quantile(slope_only$SlopeSEG1,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
   
   library(colorspace)
   library(sp)
-  #dat is just a data frame, with two variables specifying the locations of the cell centers
-  #base_stack is a raster stack with resolution designed to match the dataframe
-  
   library(colorRamps)
-  plot(raster_slope)
-  spplot(raster_slope,
+  plot(cold_desert_spatiotemporal_mean)
+  
+  spplot(raster_slope,#scales = list(draw = TRUE),
          at=break_slope,
          asp=1,
          col.regions =
-           rev(terrain.colors (length(break_slope)-1)),
-         main="")
+           rev(terrain.colors(length(break_slope)-1)),
+         main="") +
+    layer(sp.polygons(crop_northern_mixed, lwd = .75))
   
-       #reverse colro scheme
-        #rev
+  ###
+  library(latticeExtra)
+  
+  #crop shapefule to the raster file of semiarid
+  ex<-extent(raster_slope)
+  crop_semiarid<-crop(Colorado,ex) 
+  
+  #crop raster shapefile extent of california
+  ex_cali<-extent(cali_spatiotemporal_sd)
+  crop_cali<-crop(states_california,ex_cali)
+  plot(states_california)
+  new_cali<-mask(crop_cali_sd,states_california)
+  
+  #crop hot deserts
+  ex_hot_desert<-extent(hot_deserts_spatiotemporal_sd)
+  crop_hot_deserts<-crop(states_hot_deserts,ex_hot_desert)
+  new_hot_deserts<-mask(crop_hot_deserts,states_hot_deserts)
+       plot(crop_hot_deserts)
+       
+       #crop cold deserts
+       ex_cold_desert<-extent(cold_deserts_spatiotemporal_sd)
+       crop_cold_deserts<-crop(states_cold_deserts,ex_cold_desert)
+       plot(crop_cold_deserts)
+  
+       #crop northern mixed
+       ex_northern_mixed<-extent(northern_mixed_deserts_spatiotemporal_sd)
+       crop_northern_mixed<-crop(states_northern_mixed,ex_northern_mixed)
+       plot(crop_northern_mixed)
+       
+       
   #colors
   #terrain.colors - for productivity
   #heat_hcl
   #green2red
-  setwd
-  setwd('/Users/andrewfelton/Desktop/USU/Remote_Sensing')
-  l = list.files(paths, full.names = TRUE)
-  l[sapply(l, file.size) == 0]
+  
+  
   #to crop by states...
   update.packages()
   library(rgdal)
@@ -713,12 +698,21 @@ range(p_sd_mean$cv,na.rm=TRUE)
   getData('ISO3')
   getData('worldclim', var='bio', res=10)
   map('usa',fill=FALSE,col=palette())
-  states    <- c('New Mexico', 'Texas', 'Nebraska', 'Kansas', 'Wyoming', 'Oklahoma')
-  us<-getData("GADM", country='VIR', level=1,download=TRUE)
-  ?readOGR
-  California <- out[out$NAME_1 %in% 'California',]
-  state <- readOGR(dsn = 'path.data', layer = "usa_state_shapefile")
-  projection(state) <- CRS("+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
-  ?readOGR
-  us_states <- readOGR("us-boundaries/us_bound_pop.shp")
+  
+  #get us shapefuiles and make specific state shapefiles
+  us<-getData("GADM", country='USA', level=1,download=TRUE) #download onto hardrive
+  us<-readRDS('/Users/andrewfelton/Desktop/USU/GADM_2.8_USA_adm1.rds') #take directly from hardrive 
+  
+  states_steppe <- us[us$NAME_1 %in% c('New Mexico', 'Texas', 'Nebraska', 'Kansas', 'Wyoming', 'Oklahoma','Colorado'),]
+  states_california <- us[us$NAME_1 %in% c('California'),]
+  states_hot_deserts <- us[us$NAME_1 %in% c('California','New Mexico','Arizona','Utah',
+                                            'Arizona','Texas','Colorado','Oklahoma'),]
+  states_cold_deserts <- us[us$NAME_1 %in% c('California','New Mexico','Arizona','Utah',
+                                            'Arizona','Colorado','Washington','Wyoming',
+                                            'Idaho','Oregon','Idaho','Montana'),]
+  
+  states_northern_mixed <- us[us$NAME_1 %in% c(
+                                            'Colorado','Wyoming', 'Idaho','Utah',
+                                             'Nebraska','Montana','North Dakota','South Dakota'),]
+  plot(states_northern_mixed)
   
