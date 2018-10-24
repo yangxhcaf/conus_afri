@@ -23,6 +23,16 @@ dir.AFRI <- "/Users/andrewfelton/Desktop/USU/Remote_Sensing"
 #Load raster (can name this whatever you want)
 AFRI_RegionSite_Raster <- raster(file.path(dir.AFRI , "RasterbySiteID3.tif"))
 
+#precipdata
+load(raster(file.path(dir.AFRI, "annualprecip19152015")))
+summary(annualprecip)
+head(annualprecip)
+annualprecip.2<-annualprecip[,-c(1:71)]
+annualprecip.raster<-raster(annualprecip.2)
+head(annualprecip.2)
+precip.raster()
+
+# loads dataframe named annualprecip
 #look at raster strcture
 AFRI_RegionSite_Raster
 #plot it
