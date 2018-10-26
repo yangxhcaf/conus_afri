@@ -3,7 +3,7 @@
 #setting extent for precip
 ex_northern_mixed<-extent(new_all_years_northern_mixed)
 annual_precip_allyears_northern_mixed<-crop(precip_stack,ex_northern_mixed)
-
+?crop
 plot(annual_precip_allyears_northern_mixed)
 plot(new_all_years_northern_mixed)
 

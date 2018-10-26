@@ -123,7 +123,7 @@ mean(data_frame_time_series_sgs_sd$time_series_sd_sgs) #691.0563 #average spatia
 #summaries for graphics
 #mean by pixel
 sgs_spatiotemporal_mean<-summaryBrick(new_all_years_sgs, mean, na.rm=TRUE)
-
+plot(sgs_spatiotemporal_mean)
 #standard dev
 sgs_spatiotemporal_sd<-summaryBrick(new_all_years_sgs, sd, na.rm=TRUE)
 
@@ -330,14 +330,11 @@ filenames <- dir("/Users/andrewfelton/Desktop/USU/Remote_Sensing/landsat-6000red
 filenames_stack <-stack(filenames)
 
 filenames_stack[filenames_stack >= 65535] <- NA
-filenames_stack_cold_deserts = crop(filenames_stack, extent_cold_desert) 
+filenames_stack_cold_deserts = crop(filenames_stack, extent_cold_desert)
+plot(filenames_stack_cold_deserts)
 library(devtools)
 install_github('dutri001/bfastSpatial')
 library(bfastSpatial)
-cold_deserts_spatiotemporal_mean<-summaryBrick(filenames_stack_cold_deserts, mean, na.rm=TRUE)
-plot(cold_deserts_spatiotemporal_mean)
-cold_deserts_spatiotemporal_sd<-summaryBrick(filenames_stack_cold_deserts, sd, na.rm=TRUE)
-plot(cold_deserts_spatiotemporal_sd)
 
 #try to fix the slightly off extents
 r.new = resample(AFRI_RegionSite_Raster, filenames_stack_cold_deserts , "bilinear")
@@ -349,7 +346,7 @@ plot(new_all_years_cold_deserts)
 #summary stats
 time_series_mean_cold_deserts<-cellStats(new_all_years_cold_deserts, stat='mean', na.rm=TRUE, asSample=TRUE)
 time_series_sd_cold_deserts<-cellStats(new_all_years_cold_deserts, stat='sd', na.rm=TRUE, asSample=TRUE)
-
+plot(time_series_mean_cold_deserts)
 #turn summary stats into data frame
 #mean
 data_frame_time_series_mean_cold_deserts<-as.data.frame(time_series_mean_cold_deserts)
@@ -724,5 +721,5 @@ summary(df_trend)
   states_northern_mixed <- us[us$NAME_1 %in% c(
                                             'Colorado','Wyoming', 'Idaho','Utah',
                                              'Nebraska','Montana','North Dakota','South Dakota'),]
-  plot(states_northern_mixed)
+  plot(states_steppe )
   

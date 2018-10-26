@@ -59,7 +59,7 @@ head(merge_sgs_npp_annualprecip_allyears)
 library(dplyr)
 slope_spatial_sgs <- merge_sgs_npp_annualprecip_allyears %>% group_by(x, y) %>%
   do(model = lm(value.y~mm, data = .)) %>%
-  mutate(coef=coef(model)[2]) xx
+  mutate(coef=coef(model)[2]) ##generate slopes
 
 head(slope_spatial_sgs)
 sgs_coef_only<- slope_spatial_sgs[ -c(3) ] #isolate coefficient so only slope is graphed
@@ -67,7 +67,33 @@ head(sgs_coef_only)
 sgs_raster_coef<- rasterFromXYZ(sgs_coef_only) #convert to raster
 plot(sgs_raster_coef)
 
-#
+#develop a color gradient for reference
+sgs_break_npp_ap_slope<-quantile(sgs_raster_coef$coef,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
+
+#combine slope and avergae map-npp datasets
+merge_slope_map<-merge(sgs_coef_only,merge_sgs_npp_annualprecip,by=c('x','y'))
+head(merge_slope_map)
+plot(coef~mm,data=merge_slope_map)
+
+# sp plot -----------------------------------------------------------------
+
+library(colorspace)
+library(sp)
+library(colorRamps)
+###
+library(latticeExtra) #to add an extra layer
+
+
+spplot(sgs_raster_coef,#scales = list(draw = TRUE),
+       at=sgs_break_npp_ap_slope,
+       asp=1,
+       col.regions =
+         rev(heat_hcl(length(sgs_break_npp_ap_slope)-1)),
+       main="") +
+  layer(sp.polygons(states_steppe, lwd = .75))
+
+# ggplot ------------------------------------------------------------------
+
 library(ggplot2)
 ggplot(merge_sgs_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
