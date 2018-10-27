@@ -59,9 +59,24 @@ plot(hot_deserts_raster_coef)
 hot_deserts_break_npp_ap_slope<-quantile(hot_deserts_raster_coef$coef,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
 
 #combine slope and avergae map-npp datasets
-merge_slope_map<-merge(hot_deserts_coef_only,merge_hot_deserts_npp_annualprecip,by=c('x','y'))
-head(merge_slope_map)
-plot(coef~mm,data=merge_slope_map)
+merge_slope_map_hot_deserts<-merge(hot_deserts_coef_only,hot_deserts_annualprecip_melted_mean,by=c('x','y'))
+head(merge_slope_map_hot_deserts)
+plot(coef~mm,data=merge_slope_map_hot_deserts)
+
+#see which model is better
+slope_npp_map_lm_hot_deserts<-lm(coef~mm,merge_slope_map)
+slope_npp_map_poly_hot_deserts<<-lm(coef~mm +I(mm^2),data=merge_slope_map)
+AIC(slope_npp_map_lm_hot_deserts,slope_npp_map_poly_hot_deserts) #nonlinear relationships better
+
+#add a pue column
+#for mean values
+merge_hot_deserts_npp_annualprecip$pue<-merge_hot_deserts_npp_annualprecip$value/(merge_hot_deserts_npp_annualprecip$mm)
+head(merge_hot_deserts_npp_annualprecip)
+plot(pue~mm,data=merge_hot_deserts_npp_annualprecip)
+#for all values
+merge_hot_deserts_npp_annualprecip_allyears$pue<-merge_hot_deserts_npp_annualprecip_allyears$value.y/(merge_hot_deserts_npp_annualprecip_allyears$mm)
+head(merge_hot_deserts_npp_annualprecip_allyears)
+plot(pue~mm,data=merge_hot_deserts_npp_annualprecip_allyears)
 
 # sp plot -----------------------------------------------------------------
 
@@ -78,12 +93,12 @@ spplot(hot_deserts_raster_coef,#scales = list(draw = TRUE),
        col.regions =
          rev(heat_hcl(length(hot_deserts_break_npp_ap_slope)-1)),
        main="") +
-  layer(sp.polygons(states_steppe, lwd = .75))
+  layer(sp.polygons(states_hot_deserts, lwd = .75))
 
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(merge_hot_deserts_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
+ggplot(merge_hot_deserts_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_bar() +
   geom_point(pch=1,size=.5) +
@@ -95,10 +110,12 @@ ggplot(merge_hot_deserts_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
   #geom_point() +
   #geom_smooth(method="lm",se=TRUE,linetype="dashed") +
   #geom_hline(yintercept = 713.97,color="black",size=.5) +
-  stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
-  ylab("Net primary production") +
-  xlab("Annual precipitation (mm)") +
-  ggtitle("Shortgrass steppe") +
+  #stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
+  #ylab("Net primary production") +
+  #ylab("NPP sensitivity (slope)") +
+  ylab("Precipitation use efficiency") +
+  xlab("Mean annual precipitation (mm)") +
+  #ggtitle("Shortgrass steppe") +
   #ylab(bquote('ANPP ('*g/m^2*')')) +
   #stat_summary(fun.y="mean",geom="point",size=6,pch=19) +
   #geom_boxjitter(outlier.color = NA, jitter.shape = 21, jitter.color = NA, 
@@ -109,7 +126,7 @@ ggplot(merge_hot_deserts_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
   #geom_smooth(method="lm",se=FALSE,linetype="dashed",color="black",aes(fill=Treatment),show.legend=FALSE) +
   #geom_smooth(method="lm",se=FALSE,color="black",linetype="dashed",size=1.5) +
   #stat_smooth(method = "lm", formula = y ~ poly(x, 2), linetype="dashed",size = 1,se=FALSE,color="black") + #geom_smooth(method="lm",se=FALSE,color="black") +
-  #xlab("Duration of study") +
+#xlab("Duration of study") +
 #xlab("% Precipiaton deviation from control") +
 #xlab("% Precipiaton deviation from median") +
 #ylab("ANPP effect size") +

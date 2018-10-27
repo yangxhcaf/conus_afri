@@ -42,6 +42,8 @@ sgs_annualprecip_melted <- melt(df_annualprecip_sgs,
 
 sgs_annualprecip_melted$mm<-sgs_annualprecip_melted$value*10 #change to mm
 sgs_annualprecip_melted_mean<-aggregate(mm ~ x + y,mean,data=sgs_annualprecip_melted) #get mean values
+summary(sgs_annualprecip_melted_mean$mm)
+hist(sgs_annualprecip_melted_mean$mm)
 
 #merge the mean datasets
 merge_sgs_npp_annualprecip<-merge(sgs_npp_melted_mean,sgs_annualprecip_melted_mean,by=c("x","y"))
@@ -61,6 +63,7 @@ slope_spatial_sgs <- merge_sgs_npp_annualprecip_allyears %>% group_by(x, y) %>%
   do(model = lm(value.y~mm, data = .)) %>%
   mutate(coef=coef(model)[2]) ##generate slopes
 
+summary(slope_spatial_sgs$coef)
 head(slope_spatial_sgs)
 sgs_coef_only<- slope_spatial_sgs[ -c(3) ] #isolate coefficient so only slope is graphed
 head(sgs_coef_only)
@@ -71,9 +74,24 @@ plot(sgs_raster_coef)
 sgs_break_npp_ap_slope<-quantile(sgs_raster_coef$coef,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
 
 #combine slope and avergae map-npp datasets
-merge_slope_map<-merge(sgs_coef_only,merge_sgs_npp_annualprecip,by=c('x','y'))
+merge_slope_map<-merge(sgs_coef_only,sgs_annualprecip_melted_mean,by=c('x','y'))
 head(merge_slope_map)
 plot(coef~mm,data=merge_slope_map)
+
+#see which model is better
+slope_npp_map_lm_sgs<-lm(coef~mm,merge_slope_map)
+slope_npp_map_poly_sgs<<-lm(coef~mm +I(mm^2),data=merge_slope_map)
+AIC(slope_npp_map_lm_sgs,slope_npp_map_poly_sgs) #nonlinear relationships better
+
+#add a pue column
+#for mean values
+merge_sgs_npp_annualprecip$pue<-merge_sgs_npp_annualprecip$value/(merge_sgs_npp_annualprecip$mm)
+head(merge_sgs_npp_annualprecip)
+plot(pue~mm,data=merge_sgs_npp_annualprecip)
+#for all values
+merge_sgs_npp_annualprecip_allyears$pue<-merge_sgs_npp_annualprecip_allyears$value.y/(merge_sgs_npp_annualprecip_allyears$mm)
+head(merge_sgs_npp_annualprecip_allyears)
+plot(pue~mm,data=merge_sgs_npp_annualprecip_allyears)
 
 # sp plot -----------------------------------------------------------------
 
@@ -95,7 +113,7 @@ spplot(sgs_raster_coef,#scales = list(draw = TRUE),
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(merge_sgs_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
+ggplot(merge_sgs_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_bar() +
   geom_point(pch=1,size=.5) +
@@ -107,10 +125,12 @@ ggplot(merge_sgs_npp_annualprecip,aes(mm,value,na.rm=TRUE)) +
   #geom_point() +
   #geom_smooth(method="lm",se=TRUE,linetype="dashed") +
   #geom_hline(yintercept = 713.97,color="black",size=.5) +
-  stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
-  ylab("Net primary production") +
-  xlab("Annual precipitation (mm)") +
-  ggtitle("Shortgrass steppe") +
+  #stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
+  #ylab("Net primary production") +
+  ylab("NPP sensitivity (slope)") +
+  ylab("Precipitation use efficiency") +
+  xlab("Mean annual precipitation (mm)") +
+  #ggtitle("Shortgrass steppe") +
   #ylab(bquote('ANPP ('*g/m^2*')')) +
   #stat_summary(fun.y="mean",geom="point",size=6,pch=19) +
   #geom_boxjitter(outlier.color = NA, jitter.shape = 21, jitter.color = NA, 
