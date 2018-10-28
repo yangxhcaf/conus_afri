@@ -98,7 +98,7 @@ spplot(northern_mixed_raster_coef,#scales = list(draw = TRUE),
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(merge_northern_mixed_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
+ggplot(merge_northern_mixed_npp_annualprecip_allyears,aes(mm,pue,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_bar() +
   geom_point(pch=1,size=.5) +
@@ -114,7 +114,8 @@ ggplot(merge_northern_mixed_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
   #ylab("Net primary production") +
   #ylab("NPP sensitivity (slope)") +
 ylab("Precipitation use efficiency") +
-  xlab("Mean annual precipitation (mm)") +
+  #xlab("Mean annual precipitation (mm)") +
+  xlab("Annual precipitation (mm)") +
   #ggtitle("Shortgrass steppe") +
   #ylab(bquote('ANPP ('*g/m^2*')')) +
   #stat_summary(fun.y="mean",geom="point",size=6,pch=19) +
@@ -147,3 +148,5 @@ theme(
   panel.border = element_blank(), #make the borders clear in prep for just have two axes
   axis.line.x = element_line(colour = "black"),
   axis.line.y = element_line(colour = "black"))
+
+ggsave("northern_mixed_npp_pue_ap_6000m.pdf",width = 8, height = 6, units = c("in"))

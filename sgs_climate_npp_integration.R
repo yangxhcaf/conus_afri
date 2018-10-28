@@ -92,7 +92,7 @@ plot(pue~mm,data=merge_sgs_npp_annualprecip)
 merge_sgs_npp_annualprecip_allyears$pue<-merge_sgs_npp_annualprecip_allyears$value.y/(merge_sgs_npp_annualprecip_allyears$mm)
 head(merge_sgs_npp_annualprecip_allyears)
 plot(pue~mm,data=merge_sgs_npp_annualprecip_allyears)
-
+plot(value.y~mm,data=merge_sgs_npp_annualprecip_allyears)
 # sp plot -----------------------------------------------------------------
 
 library(colorspace)
@@ -113,7 +113,7 @@ spplot(sgs_raster_coef,#scales = list(draw = TRUE),
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(merge_sgs_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
+ggplot(merge_sgs_npp_annualprecip_allyears,aes(mm,pue,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_bar() +
   geom_point(pch=1,size=.5) +
@@ -127,9 +127,10 @@ ggplot(merge_sgs_npp_annualprecip,aes(mm,pue,na.rm=TRUE)) +
   #geom_hline(yintercept = 713.97,color="black",size=.5) +
   #stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
   #ylab("Net primary production") +
-  ylab("NPP sensitivity (slope)") +
+  #ylab("NPP sensitivity (slope)") +
   ylab("Precipitation use efficiency") +
-  xlab("Mean annual precipitation (mm)") +
+  #xlab("Mean annual precipitation (mm)") +
+  xlab("Annnual precipitation (mm)") +
   #ggtitle("Shortgrass steppe") +
   #ylab(bquote('ANPP ('*g/m^2*')')) +
   #stat_summary(fun.y="mean",geom="point",size=6,pch=19) +
@@ -162,3 +163,5 @@ theme(
   panel.border = element_blank(), #make the borders clear in prep for just have two axes
   axis.line.x = element_line(colour = "black"),
   axis.line.y = element_line(colour = "black"))
+
+ggsave("sgs_npp_pue_ap_6000m.pdf",width = 8, height = 6, units = c("in"))
