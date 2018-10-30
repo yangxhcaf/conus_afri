@@ -721,5 +721,9 @@ summary(df_trend)
   states_northern_mixed <- us[us$NAME_1 %in% c(
                                             'Colorado','Wyoming', 'Idaho','Utah',
                                              'Nebraska','Montana','North Dakota','South Dakota'),]
-  plot(states_steppe )
+  states_all_sites <- us[us$NAME_1 %in% c('California','New Mexico','Arizona','Utah',
+                                             'Arizona','Colorado','Washington','Wyoming',
+                                             'Idaho','Oregon','Idaho','Montana','Texas',
+                                          'North Dakota','South Dakota','Nebraska',
+                                          'Oklahoma','Kansas'),]
   

@@ -100,7 +100,7 @@ spplot(all_sites_raster_coef,#scales = list(draw = TRUE),
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(merge_all_sites_npp_annualprecip_allyears,aes(mm,value.y,na.rm=TRUE)) +
+ggplot(merge_cv_mean,aes(value,value.y,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_bar() +
   geom_point(pch=1,size=.5) +
@@ -112,12 +112,13 @@ ggplot(merge_all_sites_npp_annualprecip_allyears,aes(mm,value.y,na.rm=TRUE)) +
   #geom_point() +
   #geom_smooth(method="lm",se=TRUE,linetype="dashed") +
   #geom_hline(yintercept = 713.97,color="black",size=.5) +
-  stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
-  ylab("Net primary production") +
+  #stat_smooth(method = "lm", formula = y ~ poly(x, 2),color="red",size = 1,se=TRUE) + 
+  ylab("NPP variability (CV)") +
+  xlab("Mean NPP") +
   #ylab("NPP sensitivity (slope)") +
 #ylab("Precipitation use efficiency") +
-  xlab("Mean annual precipitation (mm)") +
-  #xlab("Annual precipitation (mm)") +
+  #xlab("Mean annual precipitation (mm)") +
+  #xlab("CV of Annual precipitation (mm)") +
   #ggtitle("Shortgrass steppe") +
   #ylab(bquote('ANPP ('*g/m^2*')')) +
   #stat_summary(fun.y="mean",geom="point",size=6,pch=19) +
@@ -127,7 +128,7 @@ ggplot(merge_all_sites_npp_annualprecip_allyears,aes(mm,value.y,na.rm=TRUE)) +
   #stat_summary(geom="point",fun.y="identity",size=5,color="black",aes(fill=as.factor(manipulation)),shape=21,show.legend =FALSE) +
   #scale_fill_manual(values=c('Increase'='blue','Decrease'='red'),name="") +
   #geom_smooth(method="lm",se=FALSE,linetype="dashed",color="black",aes(fill=Treatment),show.legend=FALSE) +
-  #geom_smooth(method="lm",se=FALSE,color="black",linetype="dashed",size=1.5) +
+  #geom_smooth(method="lm",se=FALSE,color="red",linetype="dashed",size=1.5) +
   #stat_smooth(method = "lm", formula = y ~ poly(x, 2), linetype="dashed",size = 1,se=FALSE,color="black") + #geom_smooth(method="lm",se=FALSE,color="black") +
 #xlab("Duration of study") +
 #xlab("% Precipiaton deviation from control") +
@@ -151,4 +152,119 @@ theme(
   axis.line.x = element_line(colour = "black"),
   axis.line.y = element_line(colour = "black"))
 
-ggsave("all_sites_npp_map_6000m.pdf",width = 8, height = 6, units = c("in"))
+ggsave("all_sites_cv_mean_npp_6000m.pdf",width = 8, height = 6, units = c("in"))
+
+
+# asymmetry ---------------------------------------------------------------
+
+
+#npp pulse equation
+npp_pulse <- function(x) {
+  
+  pulse <- ((max(x) - mean(x))/mean(x))*100
+  
+  return(pulse)
+}
+
+pulse_all_sites<-aggregate(value.y~ x + y,npp_pulse,data=merge_all_sites_npp_annualprecip_allyears)
+head(pulse_all_sites)
+all_sites_raster_pulse<- rasterFromXYZ(pulse_all_sites) #convert to raster
+plot(all_sites_raster_pulse)
+
+#develop a color gradient for reference
+all_sites_break_npp_ap_pulse<-quantile(all_sites_raster_pulse$value.y,seq(from=0.01, to = .99,by=0.01),na.rm=TRUE)
+
+#plot
+spplot(all_sites_raster_pulse,#scales = list(draw = TRUE),
+       at=all_sites_break_npp_ap_pulse,
+       asp=1,
+       col.regions =
+         rev(terrain_hcl(length(all_sites_break_npp_ap_pulse)-1)),
+       main="NPP Pulse (% increase from mean NPP)") +
+  layer(sp.polygons(states_all_sites, lwd = .5))
+  
+#npp decline equation
+npp_decline <- function(x) {
+  
+  decline <- ((mean(x) - min(x))/mean(x))*100
+  
+  return(decline)
+}
+
+decline_all_sites<-aggregate(value.y~ x + y,npp_decline,data=merge_all_sites_npp_annualprecip_allyears)
+head(decline_all_sites)
+all_sites_raster_decline<- rasterFromXYZ(decline_all_sites) #convert to raster
+plot(all_sites_raster_decline)
+
+#develop a color gradient for reference
+all_sites_break_npp_ap_decline<-quantile(all_sites_raster_decline$value.y,seq(from=0.01, to = .95,by=0.01),na.rm=TRUE)
+
+#plot
+spplot(all_sites_raster_decline,#scales = list(draw = TRUE),
+       at=all_sites_break_npp_ap_decline,
+       asp=1,
+       col.regions =
+         rev(heat_hcl(length(all_sites_break_npp_ap_decline)-1)),
+       main="NPP decline (% decrease from mean NPP)") +
+  layer(sp.polygons(states_all_sites, lwd = .5))
+
+#max versus min
+npp_max_versus_min <- function(x) {
+  
+  decline <- ((mean(x) - min(x))/mean(x))*100
+  pulse <- ((max(x) - min(x))/mean(x))*100
+  comp<- pulse/decline
+  
+  return(comp)
+}
+
+#aggregate
+max_versus_min_all_sites<-aggregate(value.y~ x + y,npp_max_versus_min,data=merge_all_sites_npp_annualprecip_allyears)
+head(max_versus_min_all_sites)
+all_sites_raster_max_versus_min<- rasterFromXYZ(max_versus_min_all_sites) #convert to raster
+plot(all_sites_raster_max_versus_min)
+
+#develop a color gradient for reference
+all_sites_break_npp_ap_max_versus_min<-quantile(all_sites_raster_max_versus_min$value.y,seq(from=0.01, to = .95,by=0.01),na.rm=TRUE)
+
+#plot
+spplot(all_sites_raster_max_versus_min,#scales = list(draw = TRUE),
+       at=all_sites_break_npp_ap_max_versus_min,
+       asp=1,
+       col.regions =
+         rev(terrain_hcl(length(all_sites_break_npp_ap_max_versus_min)-1)),
+       main="Ratio of NPP pulse to decline") +
+  layer(sp.polygons(states_all_sites, lwd = .5))
+
+
+# Cv precip versus cv npp -------------------------------------------------
+
+cv<-function(x) {
+  
+  sd <- sd(!is.na(x))
+  mean <- mean(!is.na(x))
+  cv<-(sd(x)/mean(x))*100
+  
+  return(cv)
+}
+
+cv_npp_all_sites<-aggregate(value.y~ x + y,cv,data=merge_all_sites_npp_annualprecip_allyears)
+head(cv_npp_all_sites)
+summary(cv_npp_all_sites)
+
+cv_precip_all_sites<-aggregate(mm~ x + y,cv,data=merge_all_sites_npp_annualprecip_allyears)
+head(cv_precip_all_sites)
+
+merge_cv_npp_precip_all_sites<-merge(cv_npp_all_sites,cv_precip_all_sites,by=c('x','y'))
+head(merge_cv_npp_precip_all_sites)
+
+plot(value.y~mm,data=merge_cv_npp_precip_all_sites)
+lm_cv_npp<-lm(value.y~mm,data=merge_cv_npp_precip_all_sites)
+summary(lm_cv_npp)
+
+#merge cv and mean
+merge_cv_mean<-merge(all_sites_npp_melted_mean,cv_npp_all_sites,by=c('x','y'))
+head(merge_cv_mean)
+head(all_sites_npp_melted_mean)
+summary(merge_cv_mean)
+plot(value.y~value,data=merge_cv_mean)
