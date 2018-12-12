@@ -1,13 +1,14 @@
 #SGS code: linking precip and NPP
 
+#######importing of data##########
 #setting extents for rasters
 ex_sgs<-extent(npp_sgs_50)
 annual_precip_allyears_sgs<-crop(precip_stack,ex_sgs)
 annual_temp_allyears_sgs<-crop(temp_stack,ex_sgs) #temperature
 annual_transp_allyears_sgs<-crop(transp_stack,ex_sgs) #transpiration
 
+plot(npp_sgs_50)
 plot(annual_precip_allyears_sgs)
-plot(new_all_years_sgs)
 plot(annual_temp_allyears_sgs)
 plot(annual_transp_allyears_sgs)
 
@@ -16,12 +17,13 @@ plot(annual_transp_allyears_sgs)
 library(dplyr)
 library(reshape2)
 npp_sgs_p = rasterToPoints(npp_sgs_50); df_npp_sgs = data.frame(npp_sgs_p)
-head(df_npp_sgs)
+head(df_npp_sgs_2)
 colnames(df_npp_sgs)[3:32] <-paste(1986:2015) #rename coluns to years
-sgs_npp_melted <- melt(df_npp_sgs, 
+df_npp_sgs_2<-df_npp_sgs[-c(33,34)] #get rid of 2016, 2017 columns
+sgs_npp_melted <- melt(df_npp_sgs_2, 
                        id.vars = c("x", "y"),
                        variable.name = "year") #melt to long format
-
+summary(sgs_npp_melted)
 sgs_npp_melted$npp<-sgs_npp_melted$value/10 #change npp value to g/m2 scale
 sgs_npp_melted_mean<-aggregate(npp ~ x + y,mean,data=sgs_npp_melted) #mean annual npp
 
@@ -68,7 +70,7 @@ head(merge_sgs_npp_annualprecip)
 merge_sgs_npp_annualprecip_temp<-merge(sgs_annualtemp_melted_mean,merge_sgs_npp_annualprecip,by=c("x","y"))
 head(merge_sgs_npp_annualprecip_temp)
 
-#identifying outliers, odd values to be removed
+######identifying outliers, odd values to be removed##########
 # spatial npp-map relationship
 sgs.spatial.map.lm = lm(npp ~ mm, data=merge_sgs_npp_annualprecip_temp)
 summary(sgs.spatial.map.lm)
@@ -108,14 +110,16 @@ min(sgs_pue$pue)
 max(sgs_pue$pue)
 
 #use 3 standard deviations as criteria for anamolous mean PUE values
-3*0.09725593 + 0.4648272 #0.756595 as threshold for high values
-0.4648272- (3*0.09725593) #0.1730594 as threshold for low values
+#round to two decimal places
+3*0.097 + 0.46 #0.75 as threshold for high values
+0.46 - (3*0.097) #0.17 as threshold for low values
 
 #sgs actually seems fine, no extremely odd values...
+#round to two decimal places
 
 # isolate values greater than 3sd away
 pue_anamolies_sgs <- sgs_pue %>%
-  dplyr::filter(pue > 0.756595 | pue < 0.1730594) #lower than the actual min, indicates right skew
+  dplyr::filter(pue > 0.75 | pue < 0.17) #lower than the actual min, indicates right skew
 summary(pue_anamolies_sgs)
 pue_anamolies_sgs_raster<- rasterFromXYZ(pue_anamolies_sgs)
 plot(pue_anamolies_sgs_raster)
@@ -133,12 +137,12 @@ head(merge_sgs_npp_annualprecip_allyears)
 merge_sgs_npp_annualprecip_allyears_2<-merge_sgs_npp_annualprecip_allyears[-c(4,6)]
 head(merge_sgs_npp_annualprecip_allyears_2)
 
+#for generating slope dataset
 library(dplyr)
 slope_spatial_sgs <- merge_sgs_npp_annualprecip_allyears_2 %>% group_by(x, y) %>%
   do(model = lm(npp~mm, data = .)) %>%
   mutate(coef=coef(model)[2]) ##generate dataset with slopes
 
-summary(slope_spatial_sgs$coef)
 head(slope_spatial_sgs)
 sgs_coef_only<- slope_spatial_sgs[ -c(3) ] #isolate coefficient so only slope is graphed
 head(sgs_coef_only) #looks good
@@ -147,11 +151,13 @@ head(sgs_coef_only) #looks good
 #analyzing slope outliers
 
 sgs_pue_slope<-merge(sgs_coef_only,sgs_pue,by=c('x','y'))
-head(sgs_pue_slope)
+head(sgs_pue_slope_2)
+#mask out odd pue values
 sgs_pue_slope_2 <- sgs_pue_slope %>%
-  dplyr::filter(pue < 0.756595 | pue > 0.1730594) # get rid of PUE outliers
+  dplyr::filter(pue < 0.75 | pue > 0.17) # get rid of PUE outliers
 head(sgs_pue_slope_2)
 sgs_pue_slope_3<-sgs_pue_slope_2[-c(4)]
+head(sgs_pue_slope_3)
 
 #summary stats of pixel slopes
 sd(sgs_pue_slope_3$coef)
@@ -159,11 +165,11 @@ mean(sgs_pue_slope_3$coef)
 hist(sgs_pue_slope_3$coef)
 
 #values, using the 3 sd theshold again
-0.2822828 + (3*0.07016986) #0.4927924
-0.2822828 - (3*0.07016986) #0.07177322
+0.28 + (3*0.070) #0.49
+0.28 - (3*0.070) #0.07
 
 sgs_slope_anamolies <- sgs_pue_slope_3 %>%
-  dplyr::filter(coef > 0.4927924 | coef < 0.07177322) #isolate odd slope values
+  dplyr::filter(coef > 0.49 | coef < 0.070) #isolate odd slope values
 summary(sgs_slope_anamolies)
 
 #change to raster
@@ -172,38 +178,109 @@ plot(sgs_slope_anamolies_raster)
 #turn to geotiff for analaysis in google earth engine
 crs(sgs_slope_anamolies_raster) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" 
 writeRaster(sgs_slope_anamolies_raster, "sgs_slope_outliers", format = "GTiff",overwrite=TRUE)
-#odd slope values associated with agriculutre 0 remove these and then proceed with analyses
+#odd slope values associated with agriculutre. remove these and then proceed with analyses
 
 #now produce dataset with final assemblage of pixels
 sgs_slope_final <- sgs_pue_slope_3 %>%
-  dplyr::filter(coef < 0.4927924 | coef > 0.07177322) #isolate odd slope values
+  dplyr::filter(coef < 0.49 | coef > 0.07) #isolate odd slope values
 summary(sgs_slope_anamolies)
 
+#while the cutoffs are rounded, raster values need to have up to 5 decomial places.
 #turn into raster
 sgs_slope_final_raster<- rasterFromXYZ(sgs_slope_final)
-plot(sgs_slope_final_raster)
+plot(npp_sgs_50)
 
-#analyses
+#######producing dataframes#########
 #produce a final dataframe with all years for analysis
-sgs_npp_ppt_temp_all_years<-merge(merge_sgs_npp_annualprecip_allyears_2,sgs_annualtemp_melted, by=c('x','y','year'))
-head(sgs_npp_ppt_temp_all_years)
-sgs_npp_ppt_temp_transp_all_years<-merge(sgs_npp_ppt_temp_all_years,sgs_annualtransp_melted, by=c('x','y','year'))
-head(sgs_npp_ppt_temp_transp_all_years)
-sgs_npp_ppt_temp_transp_all_years$pue<-sgs_npp_ppt_temp_transp_all_years$npp/sgs_npp_ppt_temp_transp_all_years$mm
-head(sgs_npp_ppt_temp_transp_all_years)
-summary(sgs_npp_ppt_temp_transp_all_years)
-sgs_final_raster<- rasterFromXYZ(sgs_npp_ppt_temp_transp_all_years) #change to raster
-plot(sgs_final_raster)
-sgs_final_raster_masked<-mask(sgs_final_raster,sgs_slope_final_raster) #mask this raster by raster with outliers removed
-sgs_final_df<-rasterToPoints(sgs_final_raster_masked) #final dataframe for analyses
-summary(sgs_final_df)
-plot(sgs_final_raster_masked)
-plot(pue~mm,data=sgs_final_df)
+
+#net primary production
+#mask the slope raster by the npp rasterbrick
+npp_extent_crop_sgs<-crop(npp_sgs_50,sgs_slope_final_raster)
+plot(npp_extent_crop_sgs)
+npp_sgs_masked<-mask(npp_extent_crop_sgs,sgs_slope_final_raster)
+plot(npp_sgs_masked)
+
+#turn into dataframe
+npp_masked_p = rasterToPoints(npp_masked); df_npp_masked = data.frame(npp_masked_p)
+colnames(df_npp_masked)[3:32] <-paste(1986:2015) #rename coluns to years
+df_npp_masked_2<-df_npp_masked[-c(33,34)] #get rid of 2016, 2017 columns
+df_npp_masked_final <- melt(df_npp_masked_2, 
+                       id.vars = c("x", "y"),
+                       variable.name = "year") #melt to long format
+summary(df_npp_masked_final)
+df_npp_masked_final$npp<-df_npp_masked_final$value/10 #change npp value to g/m2 scale
+head(df_npp_masked_final)
+df_npp_masked_final_2<-df_npp_masked_final[-c(4)]
+
+#precipitation
+precip_extent_crop_sgs<-crop(annual_precip_allyears_sgs,sgs_slope_final_raster)
+plot(precip_extent_crop_sgs)
+precip_sgs_masked<-mask(precip_extent_crop_sgs,sgs_slope_final_raster)
+plot(precip_sgs_masked)
+
+#turn into dataframe
+precip_sgs_masked_p = rasterToPoints(precip_sgs_masked); df_precip_sgs_masked = data.frame(precip_sgs_masked_p)
+colnames(df_precip_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
+df_precip_masked_final <- melt(df_precip_sgs_masked, 
+                            id.vars = c("x", "y"),
+                            variable.name = "year") #melt to long format
+summary(df_precip_masked_final)
+df_precip_masked_final$mm<-df_precip_masked_final$value*10
+head(df_precip_masked_final)
+df_precip_masked_final_2<-df_precip_masked_final[-c(4)]
+
+#merge
+df_npp_ppt_masked_final<-merge(df_precip_masked_final_2,df_npp_masked_final_2,by=c('x','y','year'))
+head(df_npp_ppt_masked_final)
+plot(npp~mm,data=df_npp_ppt_masked_final)
+#make pue column
+df_npp_ppt_masked_final$pue<-df_npp_ppt_masked_final$npp/df_npp_ppt_masked_final$mm
+plot(pue~mm,data=df_npp_ppt_masked_final)
+
+#temperature
+temp_extent_crop_sgs<-crop(annual_temp_allyears_sgs,sgs_slope_final_raster)
+plot(temp_extent_crop_sgs)
+temp_sgs_masked<-mask(temp_extent_crop_sgs,sgs_slope_final_raster)
+plot(temp_sgs_masked)
+temp_sgs_masked_p = rasterToPoints(temp_sgs_masked); df_temp_sgs_masked = data.frame(temp_sgs_masked_p)
+colnames(df_temp_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
+df_temp_masked_final <- melt(df_temp_sgs_masked, 
+                               id.vars = c("x", "y"),
+                               variable.name = "year") #melt to long format
+summary(df_temp_masked_final)
+df_temp_masked_final$temp<-df_temp_masked_final$value
+head(df_temp_masked_final)
+df_temp_masked_final_2<-df_temp_masked_final[-c(4)]
+
+#merge
+df_npp_ppt_temp_masked_final<-merge(df_temp_masked_final_2,df_npp_ppt_masked_final,by=c('x','y','year'))
+head(df_npp_ppt_temp_masked_final)
+
+#transpiration
+transp_extent_crop_sgs<-crop(annual_transp_allyears_sgs,sgs_slope_final_raster)
+plot(transp_extent_crop_sgs)
+transp_sgs_masked<-mask(transp_extent_crop_sgs,sgs_slope_final_raster)
+plot(transp_sgs_masked)
+transp_sgs_masked_p = rasterToPoints(transp_sgs_masked); df_transp_sgs_masked = data.frame(transp_sgs_masked_p)
+colnames(df_transp_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
+df_transp_masked_final <- melt(df_transp_sgs_masked, 
+                             id.vars = c("x", "y"),
+                             variable.name = "year") #melt to long format
+summary(df_transp_masked_final)
+df_transp_masked_final$transp<-df_transp_masked_final$value
+head(df_transp_masked_final)
+df_transp_masked_final_2<-df_transp_masked_final[-c(4)]
+
+#merge
+df_npp_ppt_temp_transp_masked_final<-merge(df_transp_masked_final_2,df_npp_ppt_temp_masked_final,by=c('x','y','year'))
+head(df_npp_ppt_temp_transp_masked_final)
+plot(sqrt(pue)~sqrt(transp),data=df_npp_ppt_temp_transp_masked_final)
+
+
+# plotting -----------------------------------------------------------------
 
 #develop a color gradient for reference
 sgs_break_npp_ap_slope<-quantile(sgs_raster_coef$coef,seq(from=0.01, to = 0.99,by=0.01),na.rm=TRUE)
-
-# plotting -----------------------------------------------------------------
 
 library(colorspace)
 library(sp)
@@ -246,7 +323,7 @@ spplot(sgs_raster_coef,#scales = list(draw = TRUE),
 # ggplot ------------------------------------------------------------------
 
 library(ggplot2)
-ggplot(sgs_final_df,aes(mm,pue,na.rm=TRUE)) +
+ggplot(df_npp_ppt_masked_final,aes(mm,pue,na.rm=TRUE)) +
   #scale_color_manual(values=c('increase'='blue','decrease'='red'),name="") +
   #geom_histogram(binwidth=0.01) +
   geom_point(pch=1,size=.5) +
@@ -274,8 +351,8 @@ ggplot(sgs_final_df,aes(mm,pue,na.rm=TRUE)) +
   #stat_summary(geom="point",fun.y="identity",size=5,color="black",aes(fill=as.factor(manipulation)),shape=21,show.legend =FALSE) +
   #scale_fill_manual(values=c('Increase'='blue','Decrease'='red'),name="") +
   #geom_smooth(method="lm",se=FALSE,linetype="dashed",color="black",aes(fill=Treatment),show.legend=FALSE) +
-  geom_smooth(method="lm",se=TRUE,color="red",linetype="dashed",size=1.5) +
-  #stat_smooth(method = "lm", formula = y ~ poly(x, 2), linetype="dashed",size = 1,se=FALSE,color="black") + #geom_smooth(method="lm",se=FALSE,color="black") +
+  #geom_smooth(method="lm",se=TRUE,color="red",linetype="dashed",size=1.5) +
+  stat_smooth(method = "lm", formula = y ~ poly(x, 2), linetype="dashed",size = 1,se=FALSE,color="black") + #geom_smooth(method="lm",se=FALSE,color="black") +
   #xlab("Duration of study") +
 #xlab("% Precipiaton deviation from control") +
 #xlab("% Precipiaton deviation from median") +
