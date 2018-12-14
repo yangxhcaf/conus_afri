@@ -136,12 +136,12 @@ merge_sgs_npp_annualprecip_allyears<-merge(sgs_annualprecip_melted,sgs_npp_melte
 head(merge_sgs_npp_annualprecip_allyears)
 merge_sgs_npp_annualprecip_allyears_2<-merge_sgs_npp_annualprecip_allyears[-c(4,6)]
 head(merge_sgs_npp_annualprecip_allyears_2)
-
+test<-rasterFromXYZ(merge_sgs_npp_annualprecip_allyears_2)
 #for generating slope dataset
 library(dplyr)
 slope_spatial_sgs <- merge_sgs_npp_annualprecip_allyears_2 %>% group_by(x, y) %>%
-  do(model = lm(npp~mm, data = .)) %>%
-  mutate(coef=coef(model)[2]) ##generate dataset with slopes
+  dplyr::do(model = lm(npp~mm, data = .)) %>%
+  dplyr::mutate(coef=coef(model)[2]) ##generate dataset with slopes
 
 head(slope_spatial_sgs)
 sgs_coef_only<- slope_spatial_sgs[ -c(3) ] #isolate coefficient so only slope is graphed
@@ -151,12 +151,12 @@ head(sgs_coef_only) #looks good
 #analyzing slope outliers
 
 sgs_pue_slope<-merge(sgs_coef_only,sgs_pue,by=c('x','y'))
-head(sgs_pue_slope_2)
+head(sgs_pue_slope)
+
 #mask out odd pue values
-sgs_pue_slope_2 <- sgs_pue_slope %>%
-  dplyr::filter(pue < 0.75 | pue > 0.17) # get rid of PUE outliers
-head(sgs_pue_slope_2)
-sgs_pue_slope_3<-sgs_pue_slope_2[-c(4)]
+sgs_pue_slope_2 <- filter(sgs_pue_slope,pue < 0.75, pue >0.17 )
+summary(sgs_pue_slope_2)
+sgs_pue_slope_3<-sgs_pue_slope_2.1[-c(4)]
 head(sgs_pue_slope_3)
 
 #summary stats of pixel slopes
@@ -172,6 +172,7 @@ sgs_slope_anamolies <- sgs_pue_slope_3 %>%
   dplyr::filter(coef > 0.49 | coef < 0.070) #isolate odd slope values
 summary(sgs_slope_anamolies)
 
+
 #change to raster
 sgs_slope_anamolies_raster<- rasterFromXYZ(sgs_slope_anamolies)
 plot(sgs_slope_anamolies_raster)
@@ -181,100 +182,170 @@ writeRaster(sgs_slope_anamolies_raster, "sgs_slope_outliers", format = "GTiff",o
 #odd slope values associated with agriculutre. remove these and then proceed with analyses
 
 #now produce dataset with final assemblage of pixels
-sgs_slope_final <- sgs_pue_slope_3 %>%
-  dplyr::filter(coef < 0.49 | coef > 0.07) #isolate odd slope values
-summary(sgs_slope_anamolies)
 
-#while the cutoffs are rounded, raster values need to have up to 5 decomial places.
-#turn into raster
-sgs_slope_final_raster<- rasterFromXYZ(sgs_slope_final)
-plot(npp_sgs_50)
+summary(sgs_slope_final)
+sgs_slope_final<-filter(sgs_pue_slope_3, coef < 0.49,coef>0.07)
+summary(sgs_slope_final)
+
+#make a masking raster for slope
+sgs_slope_masking_raster<- rasterFromXYZ(sgs_slope_final)
+plot(sgs_slope_masking_raster)
+#mask npp
+npp_slope_mask_sgs_extent<-crop(npp_sgs_50,sgs_slope_masking_raster)
+npp_slope_mask_sgs_mask<-crop(npp_slope_mask_sgs_extent,sgs_slope_masking_raster)
+plot(npp_slope_mask_sgs_mask)
+#mask ppt
+precip_slope_mask_sgs_extent<-crop(annual_precip_allyears_sgs,sgs_slope_masking_raster)
+precip_slope_mask_sgs_mask<-crop(precip_slope_mask_sgs_extent,sgs_slope_masking_raster)
+plot(npp_slope_mask_sgs_mask)
+#turn into dataframes
+#npp
+npp_sgs_masked_round_one_p = rasterToPoints(npp_slope_mask_sgs_mask); df_npp_sgs_masked_round_one = data.frame(npp_sgs_masked_round_one_p)
+colnames(df_npp_sgs_masked_round_one)[3:32] <-paste(1986:2015) #rename coluns to years
+df_npp_sgs_masked_round_one_2<-df_npp_sgs_masked_round_one[-c(33,34)] #get rid of 2016, 2017 columns
+df_npp_sgs_masked_round_one_final <- melt(df_npp_sgs_masked_round_one_2, 
+                                id.vars = c("x", "y"),
+                                variable.name = "year") #melt to long format
+df_npp_sgs_masked_round_one_final$npp<-df_npp_sgs_masked_round_one_final$value/10 #change npp value to g/m2 scale
+head(df_npp_sgs_masked_round_one_final)
+df_npp_sgs_masked_round_one_final_2<-df_npp_sgs_masked_round_one_final[-c(4)]
+head(df_npp_sgs_masked_round_one_final_2)
+
+#precip
+precip_sgs_masked_round_one_p = rasterToPoints(precip_slope_mask_sgs_mask); df_precip_sgs_masked_round_one = data.frame(precip_sgs_masked_round_one_p )
+colnames(df_precip_sgs_masked_round_one)[3:32] <-paste(1986:2015) #rename coluns to years
+df_precip_sgs_masked_final_round_one <- melt(df_precip_sgs_masked_round_one, 
+                                   id.vars = c("x", "y"),
+                                   variable.name = "year") #melt to long format
+
+df_precip_sgs_masked_final_round_one$mm<-df_precip_sgs_masked_final_round_one$value*10
+df_precip_sgs_masked_final_round_one_2<-df_precip_sgs_masked_final_round_one[-c(4)]
+head(df_precip_sgs_masked_final_round_one_2)
+
+#merge these two
+sgs_npp_mm_slope_masked<-merge(df_precip_sgs_masked_final_round_one_2,df_npp_sgs_masked_round_one_final_2,by=c('x','y','year'))
+#make a pue column
+sgs_npp_mm_slope_masked$pue<-sgs_npp_mm_slope_masked$npp/sgs_npp_mm_slope_masked$mm
+sgs_npp_mm_slope_masked<-sgs_npp_mm_slope_masked[-c(4,5)]
+head(sgs_npp_mm_slope_masked)
+
+#yearly pue anamolies (incorporate later)
+sd(sgs_npp_mm_slope_masked$pue)
+mean(sgs_npp_mm_slope_masked$pue)
+min(sgs_npp_mm_slope_masked$pue)
+#3 sd for yearly pue
+0.47 + 3*0.16
+0.47 - 3*0.16
+
+yearly_pue_anamolies_sgs<-filter(sgs_npp_mm_slope_masked,pue > 0.95)
+yearly_pue_anamolies_sgs_final<-yearly_pue_anamolies_sgs[-c(3)]
+summary(yearly_pue_anamolies_sgs_final)
+odd_pue_values_sgs<-rasterFromXYZ(yearly_pue_anamolies_sgs)
+plot(odd_pue_values_sgs)
+
+#mask out bad pue pixels from slope masking raster
+sgs_masking_extent<-crop(sgs_slope_masking_raster,odd_pue_values_sgs)
+sgs_masking<-mask(sgs_masking_extent,odd_pue_values_sgs,inverse=TRUE) #mask out pixels with bad pue
+plot(sgs_masking)
 
 #######producing dataframes#########
 #produce a final dataframe with all years for analysis
-
 #net primary production
 #mask the slope raster by the npp rasterbrick
-npp_extent_crop_sgs<-crop(npp_sgs_50,sgs_slope_final_raster)
+
+npp_extent_crop_sgs<-crop(npp_sgs_50,sgs_masking)
 plot(npp_extent_crop_sgs)
-npp_sgs_masked<-mask(npp_extent_crop_sgs,sgs_slope_final_raster)
+npp_sgs_masked<-mask(npp_extent_crop_sgs,sgs_masking)
 plot(npp_sgs_masked)
+library(dplyr)
+library(reshape2)
 
 #turn into dataframe
-npp_masked_p = rasterToPoints(npp_masked); df_npp_masked = data.frame(npp_masked_p)
-colnames(df_npp_masked)[3:32] <-paste(1986:2015) #rename coluns to years
-df_npp_masked_2<-df_npp_masked[-c(33,34)] #get rid of 2016, 2017 columns
-df_npp_masked_final <- melt(df_npp_masked_2, 
-                       id.vars = c("x", "y"),
-                       variable.name = "year") #melt to long format
-summary(df_npp_masked_final)
-df_npp_masked_final$npp<-df_npp_masked_final$value/10 #change npp value to g/m2 scale
-head(df_npp_masked_final)
-df_npp_masked_final_2<-df_npp_masked_final[-c(4)]
-
+npp_sgs_masked_p = rasterToPoints(npp_sgs_masked); df_npp_sgs_masked = data.frame(npp_sgs_masked_p)
+colnames(df_npp_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
+df_npp_sgs_masked_2<-df_npp_sgs_masked[-c(33,34)] #get rid of 2016, 2017 columns
+df_npp_sgs_masked_final <- melt(df_npp_sgs_masked_2, 
+                                        id.vars = c("x", "y"),
+                                        variable.name = "year") #melt to long format
+summary(df_npp_sgs_masked_final)
+df_npp_sgs_masked_final$npp<-df_npp_sgs_masked_final$value/10 #change npp value to g/m2 scale
+head(df_npp_sgs_masked_final)
+df_npp_sgs_masked_final_2<-df_npp_sgs_masked_final[-c(4)]
+summary(df_npp_sgs_masked_final_2)
+str(df_npp_sgs_masked_final_2)
 #precipitation
-precip_extent_crop_sgs<-crop(annual_precip_allyears_sgs,sgs_slope_final_raster)
+precip_extent_crop_sgs<-crop(annual_precip_allyears_sgs,sgs_masking)
 plot(precip_extent_crop_sgs)
-precip_sgs_masked<-mask(precip_extent_crop_sgs,sgs_slope_final_raster)
+precip_sgs_masked<-mask(precip_extent_crop_sgs,sgs_masking)
 plot(precip_sgs_masked)
 
 #turn into dataframe
 precip_sgs_masked_p = rasterToPoints(precip_sgs_masked); df_precip_sgs_masked = data.frame(precip_sgs_masked_p)
 colnames(df_precip_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
-df_precip_masked_final <- melt(df_precip_sgs_masked, 
-                            id.vars = c("x", "y"),
-                            variable.name = "year") #melt to long format
-summary(df_precip_masked_final)
-df_precip_masked_final$mm<-df_precip_masked_final$value*10
+df_precip_sgs_masked_final <- melt(df_precip_sgs_masked, 
+                                           id.vars = c("x", "y"),
+                                           variable.name = "year") #melt to long format
+summary(df_precip_sgs_masked_final)
+df_precip_sgs_masked_final$mm<-df_precip_sgs_masked_final$value*10
 head(df_precip_masked_final)
-df_precip_masked_final_2<-df_precip_masked_final[-c(4)]
-
+df_precip_sgs_masked_final_2<-df_precip_sgs_masked_final[-c(4)]
+summary(df_precip_sgs_masked_final_2)
+str(df_precip_sgs_masked_final_2)
 #merge
-df_npp_ppt_masked_final<-merge(df_precip_masked_final_2,df_npp_masked_final_2,by=c('x','y','year'))
-head(df_npp_ppt_masked_final)
-plot(npp~mm,data=df_npp_ppt_masked_final)
+df_npp_ppt_sgs_masked_final<-merge(df_precip_sgs_masked_final_2,df_npp_sgs_masked_final_2,by=c('x','y','year'))
+head(df_npp_ppt_sgs_masked_final)
+plot(npp~mm,data=df_npp_ppt_sgs_masked_final)
+
 #make pue column
-df_npp_ppt_masked_final$pue<-df_npp_ppt_masked_final$npp/df_npp_ppt_masked_final$mm
-plot(pue~mm,data=df_npp_ppt_masked_final)
+df_npp_ppt_sgs_masked_final$pue<-df_npp_ppt_sgs_masked_final$npp/df_npp_ppt_sgs_masked_final$mm
+plot(pue~mm,data=df_npp_ppt_sgs_masked_final)
+summary(df_npp_ppt_sgs_masked_final)
 
 #temperature
-temp_extent_crop_sgs<-crop(annual_temp_allyears_sgs,sgs_slope_final_raster)
+temp_extent_crop_sgs<-crop(annual_temp_allyears_sgs,sgs_masking)
 plot(temp_extent_crop_sgs)
-temp_sgs_masked<-mask(temp_extent_crop_sgs,sgs_slope_final_raster)
+temp_sgs_masked<-mask(temp_extent_crop_sgs,sgs_masking)
 plot(temp_sgs_masked)
 temp_sgs_masked_p = rasterToPoints(temp_sgs_masked); df_temp_sgs_masked = data.frame(temp_sgs_masked_p)
 colnames(df_temp_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
-df_temp_masked_final <- melt(df_temp_sgs_masked, 
-                               id.vars = c("x", "y"),
-                               variable.name = "year") #melt to long format
-summary(df_temp_masked_final)
-df_temp_masked_final$temp<-df_temp_masked_final$value
-head(df_temp_masked_final)
-df_temp_masked_final_2<-df_temp_masked_final[-c(4)]
+df_temp_sgs_masked_final <- melt(df_temp_sgs_masked, 
+                                         id.vars = c("x", "y"),
+                                         variable.name = "year") #melt to long format
+summary(df_temp_sgs_masked_final)
+df_temp_sgs_masked_final$temp<-df_temp_sgs_masked_final$value
+head(df_temp_sgs_masked_final)
+df_temp_sgs_masked_final_2<-df_temp_sgs_masked_final[-c(4)]
 
 #merge
-df_npp_ppt_temp_masked_final<-merge(df_temp_masked_final_2,df_npp_ppt_masked_final,by=c('x','y','year'))
-head(df_npp_ppt_temp_masked_final)
+df_npp_ppt_temp_sgs_masked_final<-merge(df_temp_sgs_masked_final_2,df_npp_ppt_sgs_masked_final,by=c('x','y','year'))
+head(df_npp_ppt_temp_sgs_masked_final)
 
 #transpiration
-transp_extent_crop_sgs<-crop(annual_transp_allyears_sgs,sgs_slope_final_raster)
+transp_extent_crop_sgs<-crop(annual_transp_allyears_sgs,sgs_masking)
 plot(transp_extent_crop_sgs)
-transp_sgs_masked<-mask(transp_extent_crop_sgs,sgs_slope_final_raster)
+transp_sgs_masked<-mask(transp_extent_crop_sgs,sgs_masking)
 plot(transp_sgs_masked)
 transp_sgs_masked_p = rasterToPoints(transp_sgs_masked); df_transp_sgs_masked = data.frame(transp_sgs_masked_p)
 colnames(df_transp_sgs_masked)[3:32] <-paste(1986:2015) #rename coluns to years
-df_transp_masked_final <- melt(df_transp_sgs_masked, 
-                             id.vars = c("x", "y"),
-                             variable.name = "year") #melt to long format
-summary(df_transp_masked_final)
-df_transp_masked_final$transp<-df_transp_masked_final$value
-head(df_transp_masked_final)
-df_transp_masked_final_2<-df_transp_masked_final[-c(4)]
+df_transp_sgs_masked_final <- melt(df_transp_sgs_masked, 
+                                           id.vars = c("x", "y"),
+                                           variable.name = "year") #melt to long format
+summary(df_transp_sgs_masked_final)
+df_transp_sgs_masked_final$transp<-df_transp_sgs_masked_final$value
+head(df_transp_sgs_masked_final)
+df_transp_sgs_masked_final_2<-df_transp_sgs_masked_final[-c(4)]
 
 #merge
-df_npp_ppt_temp_transp_masked_final<-merge(df_transp_masked_final_2,df_npp_ppt_temp_masked_final,by=c('x','y','year'))
-head(df_npp_ppt_temp_transp_masked_final)
-plot(sqrt(pue)~sqrt(transp),data=df_npp_ppt_temp_transp_masked_final)
+df_npp_ppt_temp_transp_sgs_masked_final<-merge(df_transp_sgs_masked_final_2,df_npp_ppt_temp_sgs_masked_final,by=c('x','y','year'))
+head(df_npp_ppt_temp_transp_sgs_masked_final)
+plot(sqrt(pue)~sqrt(transp),data=df_npp_ppt_temp_transp_sgs_masked_final)
+hist(df_npp_ppt_temp_transp_sgs_masked_final$pue)
+summary(df_npp_ppt_temp_transp_sgs_masked_final)
+
+#merge
+df_npp_ppt_temp_transp_sgs_masked_final<-merge(df_transp_sgs_masked_final_2,df_npp_ppt_temp_masked_final,by=c('x','y','year'))
+head(df_npp_ppt_temp_transp_sgs_masked_final)
+plot(pue~transp,data=df_npp_ppt_temp_transp_sgs_masked_final)
 
 
 # plotting -----------------------------------------------------------------
